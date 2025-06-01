@@ -1,39 +1,31 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/livewire-starter-kit",
-    "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
-    "keywords": [
-        "laravel",
-        "framework"
-    ],
+    "name": "galenaltaiir/lightning-search",
+    "description": "High-performance Laravel search package powered by Go",
+    "type": "library",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "GalenAltaiir",
+            "role": "Developer"
+        }
+    ],
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^12.0",
-        "laravel/tinker": "^2.10.1",
-        "livewire/flux": "^2.1.1",
-        "livewire/volt": "^1.7.0"
+        "laravel/framework": "^10.0|^11.0"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.23",
-        "laravel/pail": "^1.2.2",
-        "laravel/pint": "^1.18",
-        "laravel/sail": "^1.41",
-        "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.6",
-        "phpunit/phpunit": "^11.5.3"
+        "orchestra/testbench": "^8.0|^9.0",
+        "phpunit/phpunit": "^10.0|^11.0"
     },
     "autoload": {
         "psr-4": {
-            "App\\": "app/",
-            "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/"
+            "GalenAltaiir\\LightningSearch\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "GalenAltaiir\\LightningSearch\\Tests\\": "tests/"
         }
     },
     "scripts": {
@@ -63,7 +55,12 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "providers": [
+                "GalenAltaiir\\LightningSearch\\LightningSearchServiceProvider"
+            ],
+            "aliases": {
+                "LightningSearch": "GalenAltaiir\\LightningSearch\\Facades\\LightningSearch"
+            }
         }
     },
     "config": {
@@ -75,6 +72,6 @@
             "php-http/discovery": true
         }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true
 }
