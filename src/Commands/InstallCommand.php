@@ -171,13 +171,17 @@ class InstallCommand extends Command
         $envFile = base_path('.env');
         $envExample = base_path('.env.example');
 
+        // Get number of CPU cores
+        $cpuCores = php_sapi_name() === 'cli' ? trim(shell_exec('nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1')) : 1;
+        $defaultCores = min((int)$cpuCores, 4); // Default to 4 cores max
+
         $envVars = [
             'LIGHTNING_SEARCH_HOST' => '127.0.0.1',
             'LIGHTNING_SEARCH_PORT' => '8081',
             'LIGHTNING_SEARCH_DEFAULT_MODE' => 'go',
             'LIGHTNING_SEARCH_FALLBACK_MODE' => 'eloquent',
-            'LIGHTNING_SEARCH_CPU_CORES' => '1',
-            'LIGHTNING_SEARCH_MAX_CONNECTIONS' => '10',
+            'LIGHTNING_SEARCH_CPU_CORES' => $defaultCores,
+            'LIGHTNING_SEARCH_MAX_CONNECTIONS' => $defaultCores * 5, // 5 connections per core
             'LIGHTNING_SEARCH_CACHE_DURATION' => '300',
             'LIGHTNING_SEARCH_RESULT_LIMIT' => '1000',
         ];
@@ -190,6 +194,17 @@ class InstallCommand extends Command
                 File::append($envExample, "\n{$key}={$value}");
             }
         }
+
+        // Add performance tips
+        $this->info('Performance Configuration:');
+        $this->line('- Using ' . $defaultCores . ' CPU cores (max 4, override with LIGHTNING_SEARCH_CPU_CORES)');
+        $this->line('- Database pool: ' . ($defaultCores * 5) . ' connections');
+        $this->line('- Cache duration: 300 seconds');
+        $this->line('');
+        $this->line('For better performance:');
+        $this->line('1. Ensure your searchable fields are properly indexed');
+        $this->line('2. For fulltext search, add FULLTEXT indexes to your tables');
+        $this->line('3. Adjust LIGHTNING_SEARCH_CPU_CORES and LIGHTNING_SEARCH_MAX_CONNECTIONS based on your server capacity');
     }
 
     protected function envHasVariable(string $file, string $key): bool

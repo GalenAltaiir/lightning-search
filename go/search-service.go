@@ -97,12 +97,46 @@ func (c *Cache) Get(key string) ([]map[string]interface{}, int, int64, bool) {
 	return item.data, item.count, item.timeMs, true
 }
 
+var envPath string // Global variable to store .env path
+
 func loadConfig() (*SearchConfig, error) {
-	// Try to load .env from Laravel root
-	laravelRoot := filepath.Dir(filepath.Dir(os.Args[0]))
-	err := godotenv.Load(filepath.Join(laravelRoot, ".env"))
+	// Try to find Laravel root by looking for .env file
+	execPath, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get executable path: %v", err)
+	}
+
+	// Start from the binary location and traverse up until we find .env
+	currentDir := filepath.Dir(execPath)
+	maxDepth := 5 // Prevent infinite loop
+
+	for i := 0; i < maxDepth; i++ {
+		testPath := filepath.Join(currentDir, ".env")
+		if _, err := os.Stat(testPath); err == nil {
+			envPath = testPath
+			break
+		}
+		parentDir := filepath.Dir(currentDir)
+		if parentDir == currentDir {
+			break
+		}
+		currentDir = parentDir
+	}
+
+	if envPath == "" {
+		return nil, fmt.Errorf("could not find .env file in parent directories")
+	}
+
+	err = godotenv.Load(envPath)
 	if err != nil {
 		log.Printf("Warning: Error loading .env file: %v", err)
+	}
+
+	// Get number of CPU cores
+	cpuCores := runtime.NumCPU()
+	defaultCores := cpuCores
+	if defaultCores > 4 {
+		defaultCores = 4 // Default to 4 cores max, can be overridden
 	}
 
 	return &SearchConfig{
@@ -114,8 +148,8 @@ func loadConfig() (*SearchConfig, error) {
 		DBName:         getEnv("LIGHTNING_SEARCH_DB_DATABASE", getEnv("DB_DATABASE", "")),
 		DBUser:         getEnv("LIGHTNING_SEARCH_DB_USERNAME", getEnv("DB_USERNAME", "root")),
 		DBPass:         getEnv("LIGHTNING_SEARCH_DB_PASSWORD", getEnv("DB_PASSWORD", "")),
-		CPUCores:       getEnvInt("LIGHTNING_SEARCH_CPU_CORES", 1),
-		MaxConnections: getEnvInt("LIGHTNING_SEARCH_MAX_CONNECTIONS", 10),
+		CPUCores:       getEnvInt("LIGHTNING_SEARCH_CPU_CORES", defaultCores),
+		MaxConnections: getEnvInt("LIGHTNING_SEARCH_MAX_CONNECTIONS", cpuCores * 5), // 5 connections per core
 		CacheDuration:  getEnvInt("LIGHTNING_SEARCH_CACHE_DURATION", 300),
 		ResultLimit:    getEnvInt("LIGHTNING_SEARCH_RESULT_LIMIT", 1000),
 	}, nil
@@ -175,12 +209,13 @@ func main() {
 
 	// Print technical setup
 	log.Printf("=== Lightning Search Service ===")
-	log.Printf("CPU Cores: %d", config.CPUCores)
+	log.Printf("CPU Cores: %d/%d", config.CPUCores, runtime.NumCPU())
 	log.Printf("Max DB Connections: %d", config.MaxConnections)
 	log.Printf("Cache Duration: %ds", config.CacheDuration)
 	log.Printf("Result Limit: %d", config.ResultLimit)
 	log.Printf("Go Version: %s", runtime.Version())
 	log.Printf("OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
+	log.Printf("Environment: %s", envPath)
 	log.Printf("=============================")
 
 	// Create cache
@@ -276,24 +311,26 @@ func main() {
 
 		switch req.Mode {
 		case "fulltext":
+			// Use MATCH AGAINST with relevance scoring
 			query = fmt.Sprintf(
-				"SELECT * FROM %s WHERE MATCH(%s) AGAINST(? IN BOOLEAN MODE) LIMIT %d",
+				"SELECT *, MATCH(%s) AGAINST(? IN BOOLEAN MODE) as relevance FROM %s WHERE MATCH(%s) AGAINST(? IN BOOLEAN MODE) ORDER BY relevance DESC LIMIT %d",
+				strings.Join(tableConfig.SearchableFields, ","),
 				req.Table,
 				strings.Join(tableConfig.SearchableFields, ","),
 				config.ResultLimit,
 			)
-			args = []interface{}{req.Query}
+			args = []interface{}{req.Query, req.Query}
 		default: // "like" mode
+			// Use UNION ALL for better performance with multiple fields
 			conditions := make([]string, len(tableConfig.SearchableFields))
 			args = make([]interface{}, len(tableConfig.SearchableFields))
 			for i, field := range tableConfig.SearchableFields {
-				conditions[i] = fmt.Sprintf("%s LIKE ?", field)
+				conditions[i] = fmt.Sprintf("SELECT *, 1 as relevance FROM %s WHERE %s LIKE ?", req.Table, field)
 				args[i] = "%" + req.Query + "%"
 			}
 			query = fmt.Sprintf(
-				"SELECT * FROM %s WHERE %s LIMIT %d",
-				req.Table,
-				strings.Join(conditions, " OR "),
+				"%s ORDER BY relevance DESC LIMIT %d",
+				strings.Join(conditions, " UNION ALL "),
 				config.ResultLimit,
 			)
 		}
