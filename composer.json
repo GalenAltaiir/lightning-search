@@ -3,6 +3,15 @@
     "name": "galenaltaiir/lightning-search",
     "description": "High-performance Laravel search package powered by Go",
     "type": "library",
+    "keywords": [
+        "laravel",
+        "search",
+        "full-text search",
+        "go",
+        "high-performance",
+        "mysql"
+    ],
+    "homepage": "https://github.com/GalenAltaiir/lightning-search",
     "license": "MIT",
     "authors": [
         {
@@ -12,11 +21,16 @@
     ],
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^10.0|^11.0"
+        "laravel/framework": "^10.0|^11.0",
+        "guzzlehttp/guzzle": "^7.0",
+        "illuminate/support": "^10.0|^11.0",
+        "illuminate/database": "^10.0|^11.0",
+        "illuminate/console": "^10.0|^11.0"
     },
     "require-dev": {
         "orchestra/testbench": "^8.0|^9.0",
-        "phpunit/phpunit": "^10.0|^11.0"
+        "phpunit/phpunit": "^10.0|^11.0",
+        "mockery/mockery": "^1.6"
     },
     "autoload": {
         "psr-4": {
@@ -27,31 +41,6 @@
         "psr-4": {
             "GalenAltaiir\\LightningSearch\\Tests\\": "tests/"
         }
-    },
-    "scripts": {
-        "post-autoload-dump": [
-            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
-        ],
-        "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
-        ],
-        "post-root-package-install": [
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
-        ],
-        "post-create-project-cmd": [
-            "@php artisan key:generate --ansi",
-            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
-            "@php artisan migrate --graceful --ansi"
-        ],
-        "dev": [
-            "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
-        ],
-        "test": [
-            "@php artisan config:clear --ansi",
-            "@php artisan test"
-        ]
     },
     "extra": {
         "laravel": {
@@ -64,14 +53,12 @@
         }
     },
     "config": {
-        "optimize-autoloader": true,
-        "preferred-install": "dist",
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true,
-            "php-http/discovery": true
-        }
+        "sort-packages": true
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "support": {
+        "issues": "https://github.com/GalenAltaiir/lightning-search/issues",
+        "source": "https://github.com/GalenAltaiir/lightning-search"
+    }
 }
