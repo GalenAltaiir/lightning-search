@@ -99,18 +99,22 @@ class InstallCommand extends Command
     {
         $goDir = base_path('vendor/galenaltaiir/lightning-search/go');
 
-        // Ensure Go modules are initialized
-        exec('cd ' . $goDir . ' && go mod download', $output, $returnVar);
-        if ($returnVar !== 0) {
-            $this->error('Failed to download Go dependencies.');
+        // Build for the current platform
+        $binary = PHP_OS_FAMILY === 'Windows' ? 'lightning-search.exe' : 'lightning-search';
+
+        // The go.sum file should already exist in our package
+        if (!file_exists($goDir . '/go.sum')) {
+            $this->error('Package installation error: go.sum file is missing. Please report this issue to the package maintainer.');
             return;
         }
 
-        // Build for the current platform
-        $binary = PHP_OS_FAMILY === 'Windows' ? 'lightning-search.exe' : 'lightning-search';
         exec('cd ' . $goDir . ' && go build -o ' . $binary . ' .', $output, $returnVar);
         if ($returnVar !== 0) {
-            $this->error('Failed to build Go search service.');
+            $this->error('Failed to build Go search service. Please ensure Go 1.21+ is installed and try again.');
+            $this->line('If the issue persists, you can:');
+            $this->line('1. Try running `cd ' . $goDir . ' && go build` manually');
+            $this->line('2. Check if Go is properly installed with `go version`');
+            $this->line('3. Report the issue to the package maintainer');
             return;
         }
 

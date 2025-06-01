@@ -60,5 +60,10 @@
     "support": {
         "issues": "https://github.com/GalenAltaiir/lightning-search/issues",
         "source": "https://github.com/GalenAltaiir/lightning-search"
-    }
+    },
+    "files": [
+        "go/go.mod",
+        "go/go.sum",
+        "go/search-service.go"
+    ]
 }
