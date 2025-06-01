@@ -24,7 +24,9 @@ class LightningSearchServiceProvider extends ServiceProvider
             $this->commands([
                 Commands\InstallCommand::class,
                 Commands\StartSearchCommand::class,
+                Commands\StopSearchCommand::class,
                 Commands\IndexModelsCommand::class,
+                Commands\UninstallCommand::class,
             ]);
         }
     }
