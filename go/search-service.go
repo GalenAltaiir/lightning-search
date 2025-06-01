@@ -163,6 +163,13 @@ func main() {
 		log.Fatal("Database configuration missing. Please check your .env file and ensure DB_DATABASE is set.")
 	}
 
+	// Additional validation for non-local connections without password
+	isLocalhost := config.DBHost == "127.0.0.1" || config.DBHost == "localhost" || config.DBHost == "::1"
+	if config.DBPass == "" && !isLocalhost {
+		log.Printf("⚠️  Warning: Database password is not set, but you are connecting to a non-local database (%s).", config.DBHost)
+		log.Printf("This is a security risk if this is a production or staging environment.")
+	}
+
 	// Set CPU cores
 	runtime.GOMAXPROCS(config.CPUCores)
 

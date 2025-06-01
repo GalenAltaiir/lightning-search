@@ -16,7 +16,6 @@ class InstallCommand extends Command
         'DB_PORT' => '3306',
         'DB_DATABASE' => null,
         'DB_USERNAME' => null,
-        'DB_PASSWORD' => null,
     ];
 
     public function handle()
@@ -66,6 +65,17 @@ class InstallCommand extends Command
             if (!env($var) && $default === null) {
                 $missingVars[] = $var;
             }
+        }
+
+        // Special handling for DB_PASSWORD
+        $dbHost = env('DB_HOST', '127.0.0.1');
+        $dbPassword = env('DB_PASSWORD');
+        $isLocalhost = in_array($dbHost, ['127.0.0.1', 'localhost', '::1']);
+
+        if (!$dbPassword && !$isLocalhost) {
+            $this->warn('⚠️  Warning: DB_PASSWORD is not set, but you are connecting to a non-local database.');
+            $this->warn('This is a security risk if this is a production or staging environment.');
+            $this->line('');
         }
 
         if (!empty($missingVars)) {
