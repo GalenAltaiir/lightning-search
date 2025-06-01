@@ -137,10 +137,30 @@ func getEnvInt(key string, fallback int) int {
 	return fallback
 }
 
+func loadTableConfig(table string) (*TableConfig, error) {
+	// Try to load config from Laravel's config directory
+	configPath := filepath.Join(filepath.Dir(filepath.Dir(os.Args[0])), "config", "lightning-search.php")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("config file not found at %s - please run php artisan lightning-search:install first", configPath)
+	}
+
+	// For now, return a default config - in future versions we'll parse the PHP config file
+	return &TableConfig{
+		Name:            table,
+		SearchableFields: []string{"name", "description", "content"}, // Default searchable fields
+		IndexFields:     []string{"id"},
+	}, nil
+}
+
 func main() {
 	config, err := loadConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Configuration error: ", err)
+	}
+
+	// Validate environment
+	if config.DBName == "" {
+		log.Fatal("Database configuration missing. Please check your .env file and ensure DB_DATABASE is set.")
 	}
 
 	// Set CPU cores
@@ -212,6 +232,13 @@ func main() {
 		var req SearchRequest
 		if err := json.Unmarshal(body, &req); err != nil {
 			http.Error(w, "Error parsing request JSON", http.StatusBadRequest)
+			return
+		}
+
+		// Load table configuration
+		tableConfig, err := loadTableConfig(req.Table)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Configuration error: %v", err), http.StatusInternalServerError)
 			return
 		}
 
